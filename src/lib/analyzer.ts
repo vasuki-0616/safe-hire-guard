@@ -59,7 +59,7 @@ const RULES: Rule[] = [
     title: "Asks you to deposit a check and send money back",
     reason:
       "Fake-check scams send you a check, ask you to forward part of it, and the check bounces weeks later — leaving you owing the bank.",
-    weight: 30,
+    weight: 35,
     patterns: [
       /\bdeposit\s+(the\s+|this\s+|a\s+)?(check|cheque)\b/i,
       /\b(check|cheque)\b.{0,60}\b(send|wire|transfer|forward)\b.{0,30}\b(back|rest|difference|remainder)\b/i,
