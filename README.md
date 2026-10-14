@@ -1,46 +1,49 @@
-# Safe Hire Guard
+# TrustHire AI – Job Scam Risk Detection
 
-Build a beginner-friendly AI-powered website called TrustHire AI to help students identify suspicious job and internship offers.
+## About the Project
 
-The website should have:
+TrustHire AI is a web-based tool designed to help students and job seekers identify potentially suspicious job and internship offers. It analyzes job descriptions and recruiter messages to highlight warning signs and provide safety recommendations.
 
-A clean, modern homepage with the title "TrustHire AI".
+## Problem Statement
 
-A text box where users can paste a job description or recruiter message.
+Students and fresh graduates may encounter fake job offers, misleading salary promises, registration fee scams, and fraudulent recruiters. Identifying these warning signs before responding can help reduce the risk of job-related fraud.
 
-An Analyze button.
+## Key Features
 
-A results section showing a risk level, detected warning signs, reasons, and safety recommendations.
+- Analyze pasted job descriptions and recruiter messages.
+- Identify suspicious keywords and potential warning signs.
+- Display a job risk assessment.
+- Provide explanations and safety recommendations.
+- Simple and responsive user interface.
+- Input validation and user guidance.
 
-A responsive design that works on laptops and mobile phones.
+## How It Works
 
-Input validation and clear error messages.
+1. Paste a job description or recruiter message.
+2. Click the Analyze button.
+3. The application checks the text for suspicious indicators.
+4. Review the risk result and available safety recommendations.
+5. Verify the recruiter and job offer through official sources before taking action.
 
-A disclaimer explaining that the result is only a risk assessment and does not prove that a job is fraudulent.
+## Technology Stack
 
-Start with a working prototype using transparent, explainable warning rules. Do not invent AI accuracy or claim that a real AI model is connected when it is not. Keep the code organized so an AI analysis service can be added later.
+- Frontend: React and TypeScript
+- Build Tool: Vite
+- Deployment: Vercel
+- Version Control: GitHub
 
-Make the website functional, not just a static design.
+## Live Demo
 
-This project was built with [Lovable](https://lovable.dev).
+https://safe-hire-guard.vercel.app/
 
-**Live app**: https://safe-hire-guard.lovable.app
+## Repository
 
-## Build with Lovable
+https://github.com/vasuki-0616/safe-hire-guard
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/b19c110a-40a8-4281-8bb2-659702bbb0cc).
+## Limitations
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+TrustHire AI provides an initial risk assessment based on the warning indicators implemented in the application. A risk result does not prove that a job is fraudulent, and a safe result does not guarantee that an offer is genuine. Users should independently verify employers and recruiters through official channels.
 
-## Development
+## Disclaimer
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+This project is intended for awareness and preliminary job-scam risk assessment. It should not replace independent verification or professional advice.
