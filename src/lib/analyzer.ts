@@ -5,6 +5,13 @@
  * explainable set of warning rules and reports exactly which rules
  * fired. An AI analysis service can later replace `analyzeText`
  * behind the same interface.
+ *
+ * Known limitations of rule-based detection:
+ * - It only catches tactics it has explicit rules for; new or subtle
+ *   scam wording can score low.
+ * - It can false-positive on genuine messages that happen to use
+ *   flagged phrases (e.g. a small business recruiting via Gmail).
+ * - It cannot verify that a company, domain, or person actually exists.
  */
 
 export type RiskLevel = "low" | "medium" | "high";
@@ -18,7 +25,7 @@ export interface WarningSign {
 }
 
 export interface AnalysisResult {
-  score: number; // 0–100
+  score: number; // 0–100, sum of fired rule weights, capped
   level: RiskLevel;
   signs: WarningSign[];
   recommendations: string[];
@@ -41,10 +48,22 @@ const RULES: Rule[] = [
       "Legitimate employers never ask candidates to pay for registration, training, equipment, or 'refundable deposits'.",
     weight: 30,
     patterns: [
-      /\b(registration|processing|training|security|refundable)\s+(fee|deposit|charge)/i,
+      /\b(registration|processing|training|security|refundable|joining)\s+(fee|deposit|charge)/i,
       /\bpay\s+(a\s+)?(small\s+)?(fee|deposit|amount)/i,
       /\b(send|transfer|wire)\s+(money|payment|funds)/i,
       /\bupfront\s+(payment|fee|cost)/i,
+    ],
+  },
+  {
+    id: "check-fraud",
+    title: "Asks you to deposit a check and send money back",
+    reason:
+      "Fake-check scams send you a check, ask you to forward part of it, and the check bounces weeks later — leaving you owing the bank.",
+    weight: 35,
+    patterns: [
+      /\bdeposit\s+(the\s+|this\s+|a\s+)?(check|cheque)\b/i,
+      /\b(check|cheque)\b.{0,60}\b(send|wire|transfer|forward)\b.{0,30}\b(back|rest|difference|remainder)\b/i,
+      /\boverpayment\b/i,
     ],
   },
   {
@@ -73,10 +92,23 @@ const RULES: Rule[] = [
     ],
   },
   {
+    id: "no-interview",
+    title: "Offers the job with no interview",
+    reason:
+      "Being 'selected' or 'hired immediately' without any interview or verification is a strong scam signal.",
+    weight: 20,
+    patterns: [
+      /\b(no\s+interview|without\s+(an?\s+)?interview)\b/i,
+      /\b(you\s+are|you'?ve\s+been)\s+(selected|hired|chosen)\b/i,
+      /\bimmediate\s+(joining|selection|hiring)\b/i,
+      /\bdirect\s+(joining|placement)\b/i,
+    ],
+  },
+  {
     id: "free-email",
     title: "Uses a free email address instead of a company domain",
     reason:
-      "Recruiters from real companies almost always email from their company domain (e.g. @company.com), not Gmail or Yahoo.",
+      "Recruiters from established companies almost always email from their company domain (e.g. @company.com), not Gmail or Yahoo. Small genuine businesses sometimes do, so treat this as one signal among several.",
     weight: 15,
     patterns: [
       /[\w.+-]+@(gmail|yahoo|hotmail|outlook|rediffmail|protonmail)\.(com|in|co\.in)/i,
@@ -94,6 +126,18 @@ const RULES: Rule[] = [
     ],
   },
   {
+    id: "too-good-pay",
+    title: "Unrealistically high pay for little work",
+    reason:
+      "Very high pay for a few hours of simple work, or 'guaranteed income', is a classic bait used to lure students.",
+    weight: 15,
+    patterns: [
+      /\b(earn|make|get)\s+[^\n.]{0,30}(\$\s?\d{3,}|₹\s?\d{4,}|\d{4,}\s?(rs|inr|usd))\s*(per|\/|a)\s*(day|week)/i,
+      /\b(work\s+from\s+home).{0,50}(easy|simple)\s+(money|income)/i,
+      /\b(unlimited|guaranteed)\s+(income|earnings?)\b/i,
+    ],
+  },
+  {
     id: "urgency",
     title: "Creates artificial urgency or pressure",
     reason:
@@ -107,29 +151,14 @@ const RULES: Rule[] = [
     ],
   },
   {
-    id: "too-good-pay",
-    title: "Unrealistically high pay for little work",
+    id: "secrecy",
+    title: "Asks you to keep the offer secret",
     reason:
-      "Very high pay for 'no experience' or a few hours of simple work is a classic bait used to lure students.",
-    weight: 15,
+      "Legitimate employers never ask candidates to hide a job offer from family, friends, or college staff.",
+    weight: 12,
     patterns: [
-      /\b(no\s+experience|no\s+skills?)\s+(needed|required|necessary)\b/i,
-      /\b(earn|make|get)\s+[^\n.]{0,30}(\$\s?\d{3,}|₹\s?\d{4,}|\d{4,}\s?(rs|inr|usd))\s*(per|\/|a)\s*(day|week)/i,
-      /\b(work\s+from\s+home).{0,50}(easy|simple)\s+(money|income)/i,
-      /\b(unlimited|guaranteed)\s+(income|earnings?)\b/i,
-    ],
-  },
-  {
-    id: "no-interview",
-    title: "Offers the job with no interview",
-    reason:
-      "Being 'selected' or 'hired immediately' without any interview or verification is a strong scam signal.",
-    weight: 20,
-    patterns: [
-      /\b(no\s+interview|without\s+(an?\s+)?interview)\b/i,
-      /\b(you\s+are|you'?ve\s+been)\s+(selected|hired|chosen)\b/i,
-      /\bimmediate\s+(joining|selection|hiring)\b/i,
-      /\bdirect\s+(joining|placement)\b/i,
+      /\bkeep\s+(this|it)\s+(confidential|secret|private)/i,
+      /\bdon'?t\s+(tell|share\s+with)\s+(anyone|your\s+(parents?|friends?|family))/i,
     ],
   },
   {
@@ -144,10 +173,18 @@ const RULES: Rule[] = [
     ],
   },
   {
+    id: "no-experience-bait",
+    title: "Emphasizes 'no experience needed' as bait",
+    reason:
+      "Genuine entry-level roles exist, but scammers use 'no experience needed' heavily to target students. On its own this is a weak signal.",
+    weight: 8,
+    patterns: [/\bno\s+(prior\s+)?(experience|skills?)\s+(needed|required|necessary)\b/i],
+  },
+  {
     id: "poor-language",
     title: "Excessive capitalization or spelling red flags",
     reason:
-      "Professional recruiters write carefully. Heavy ALL-CAPS and words like 'kindly revert' are common in scam templates.",
+      "Professional recruiters write carefully. Heavy ALL-CAPS and phrases like 'kindly revert' are common in scam templates.",
     weight: 8,
     patterns: [/\bkindly\s+(revert|share|send|do\s+the\s+needful)\b/i, /\bdo\s+the\s+needful\b/i],
   },
@@ -176,6 +213,10 @@ const RECOMMENDATIONS: Record<RiskLevel, string[]> = {
 export const MIN_WORDS = 20;
 export const MAX_CHARS = 20000;
 
+/** Score thresholds: sum of fired rule weights, capped at 100. */
+export const MEDIUM_THRESHOLD = 20;
+export const HIGH_THRESHOLD = 45;
+
 export function validateInput(text: string): string | null {
   const trimmed = text.trim();
   if (!trimmed) return "Please paste a job description or recruiter message first.";
@@ -187,26 +228,52 @@ export function validateInput(text: string): string | null {
   return null;
 }
 
-export function analyzeText(text: string): AnalysisResult {
-  const signs: WarningSign[] = [];
-
-  for (const rule of RULES) {
-    const matches = new Set<string>();
-    for (const pattern of rule.patterns) {
-      const re = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g");
-      for (const m of text.matchAll(re)) {
-        if (m[0]) matches.add(m[0].trim());
-        if (matches.size >= 3) break;
-      }
+function collectMatches(rule: Rule, text: string): string[] {
+  const matches = new Set<string>();
+  for (const pattern of rule.patterns) {
+    const flags = pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g";
+    const re = new RegExp(pattern.source, flags);
+    for (const m of text.matchAll(re)) {
+      if (m[0]) matches.add(m[0].trim().toLowerCase());
       if (matches.size >= 3) break;
     }
-    if (matches.size > 0) {
-      signs.push({
+    if (matches.size >= 3) break;
+  }
+  return [...matches];
+}
+
+/**
+ * Remove match snippets already claimed by a higher-weight sign, so the
+ * same phrase never appears as evidence under two different warnings.
+ */
+function dedupeMatches(signs: WarningSign[]): WarningSign[] {
+  const seen = new Set<string>();
+  return signs
+    .sort((a, b) => b.weight - a.weight)
+    .map((sign) => {
+      const unique = sign.matches.filter((m) => {
+        const key = m.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      return { ...sign, matches: unique };
+    })
+    .filter((sign) => sign.matches.length > 0);
+}
+
+export function analyzeText(text: string): AnalysisResult {
+  const rawSigns: WarningSign[] = [];
+
+  for (const rule of RULES) {
+    const matches = collectMatches(rule, text);
+    if (matches.length > 0) {
+      rawSigns.push({
         id: rule.id,
         title: rule.title,
         reason: rule.reason,
         weight: rule.weight,
-        matches: [...matches],
+        matches,
       });
     }
   }
@@ -215,23 +282,22 @@ export function analyzeText(text: string): AnalysisResult {
   const letters = text.replace(/[^a-zA-Z]/g, "");
   if (letters.length > 80) {
     const caps = text.replace(/[^A-Z]/g, "").length;
-    if (caps / letters.length > 0.35) {
+    if (caps / letters.length > 0.35 && !rawSigns.some((s) => s.id === "poor-language")) {
       const rule = RULES.find((r) => r.id === "poor-language")!;
-      if (!signs.some((s) => s.id === rule.id)) {
-        signs.push({
-          id: rule.id,
-          title: rule.title,
-          reason: "A large share of this message is written in ALL CAPITAL LETTERS, which is unusual for professional recruiters.",
-          weight: rule.weight,
-          matches: ["Excessive capitalization detected"],
-        });
-      }
+      rawSigns.push({
+        id: rule.id,
+        title: rule.title,
+        reason:
+          "A large share of this message is written in ALL CAPITAL LETTERS, which is unusual for professional recruiters.",
+        weight: rule.weight,
+        matches: ["Excessive capitalization detected"],
+      });
     }
   }
 
-  signs.sort((a, b) => b.weight - a.weight);
+  const signs = dedupeMatches(rawSigns);
   const score = Math.min(100, signs.reduce((sum, s) => sum + s.weight, 0));
-  const level: RiskLevel = score >= 45 ? "high" : score >= 20 ? "medium" : "low";
+  const level: RiskLevel = score >= HIGH_THRESHOLD ? "high" : score >= MEDIUM_THRESHOLD ? "medium" : "low";
 
   return {
     score,

@@ -247,8 +247,11 @@ function Index() {
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
                 <strong className="text-foreground">Disclaimer:</strong> This is a rule-based risk
-                assessment, not proof. A low score does not guarantee a job is genuine, and a high
-                score does not prove it is fraudulent. Always verify the employer through official
+                assessment, not proof — and no AI model is connected. The score only reflects the
+                specific warning rules that matched your text. It can miss new or subtle scam
+                tactics (low score ≠ guaranteed genuine) and can flag honest messages that happen
+                to use flagged phrases (high score ≠ proven fraud). It also cannot verify that a
+                company or recruiter actually exists. Always verify the employer through official
                 channels before sharing personal information or money.
               </p>
             </div>
